@@ -1,0 +1,209 @@
+1.  By default, Django signals are executed synchronously. This means that when a signal is sent, the receiver function connected to that signal will execute immediately, within the same thread and process as the sender. This synchronous execution can be demonstrated with the following code snippet:
+
+Code Snippet to Test Synchronous Execution of Django Signals
+In this example, we’ll use Django’s post_save signal for a model, which is triggered after a model instance is saved.
+
+models.py:
+
+from django.db import models
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+import time
+
+class ExampleModel(models.Model):
+    name = models.CharField(max_length=100)
+
+@receiver(post_save, sender=ExampleModel)
+def example_signal_receiver(sender, instance, **kwargs):
+    print("Signal received. Starting long process...")
+    time.sleep(5)  # Simulate a long-running process
+    print("Signal processing completed.")
+
+Testing the Execution Time:
+
+In a Django shell or a view, we can test the synchronous nature of the signal as follows:
+
+from myapp.models import ExampleModel
+import time
+
+print("Creating ExampleModel instance...")
+start_time = time.time()
+
+example = ExampleModel.objects.create(name="Test")
+
+end_time = time.time()
+print(f"Total time taken: {end_time - start_time} seconds")
+
+Explanation and Expected Output
+When ExampleModel.objects.create() is called, it triggers the post_save signal, which invokes example_signal_receiver.
+The example_signal_receiver function then sleeps for 5 seconds.
+Since Django signals are executed synchronously by default, the script will wait for the signal receiver to complete before continuing.
+The output will show that the "Total time taken" includes the delay caused by time.sleep(5) in the signal receiver.
+Expected Output:
+
+
+Creating ExampleModel instance...
+Signal received. Starting long process...
+Signal processing completed.
+Total time taken: 5.0 seconds
+
+
+The fact that the "Total time taken" includes the delay from time.sleep(5) in the receiver demonstrates that the signal is executed synchronously by default. If it were asynchronous, the total time would be nearly instantaneous, as the main thread would continue running without waiting for the receiver to finish.
+
+
+ 2) Yes, Django signals run in the same thread as the caller by default. This means that the receiver function connected to a signal will execute in the same thread that emitted (or "sent") the signal.
+
+Here’s a code snippet to demonstrate this behavior:
+
+Code Snippet to Test if Django Signals Run in the Same Thread as the Caller
+
+1. model.py
+
+from django.db import models
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+import threading
+
+class ExampleModel(models.Model):
+    name = models.CharField(max_length=100)
+
+@receiver(post_save, sender=ExampleModel)
+def example_signal_receiver(sender, instance, **kwargs):
+    print("Signal received.")
+    print("Receiver Thread ID:", threading.get_ident())  # Prints the thread ID for the receiver
+
+2.Testing the Thread IDs:
+
+In a Django shell or view, we can check the thread ID of both the caller and the signal receiver as follows:
+ from myapp.models import ExampleModel
+import threading
+
+print("Caller Thread ID:", threading.get_ident())  # Prints the thread ID for the caller
+
+# Creating an instance of ExampleModel, which triggers the post_save signal
+example = ExampleModel.objects.create(name="Test")
+
+Explanation and Expected Output
+When ExampleModel.objects.create() is called, it triggers the post_save signal, which invokes the example_signal_receiver.
+Both the caller and receiver print their thread IDs using threading.get_ident().
+If the signal runs in the same thread as the caller, the printed thread IDs for both the caller and the receiver will be identical.
+Expected Output:
+
+Caller Thread ID: 140675189430016
+Signal received.
+Receiver Thread ID: 140675189430016
+
+
+Since both the caller and receiver print the same thread ID, this confirms that Django signals run in the same thread as the caller by default. If the signals were running in a different thread, we would see different thread IDs for the caller and the receiver.
+
+
+3)Yes, by default, Django signals run in the same database transaction as the caller. This means that if the transaction in which a signal is sent fails or rolls back, the actions performed by the signal handler will also be rolled back.
+
+Code Snippet to Test if Django Signals Run in the Same Database Transaction as the Caller
+Here’s an example demonstrating this behavior using Django’s transaction.atomic to ensure that the signal’s actions are rolled back if the main transaction fails.
+
+models.py:
+
+from django.db import models, transaction
+from django.db.models.signals import post_save
+from django.dispatch import receiver
+
+class ExampleModel(models.Model):
+    name = models.CharField(max_length=100)
+
+class SignalModel(models.Model):
+    message = models.CharField(max_length=100)
+
+@receiver(post_save, sender=ExampleModel)
+def example_signal_receiver(sender, instance, **kwargs):
+    # Attempt to create an instance in SignalModel
+    SignalModel.objects.create(message="Signal triggered")
+
+Testing the Transaction Rollback Behavior:
+
+In a Django view or shell, let’s wrap the ExampleModel creation in an atomic transaction block and deliberately raise an exception to test if the signal’s actions roll back with the main transaction.
+
+from django.db import transaction
+from myapp.models import ExampleModel, SignalModel
+
+# Clear out previous data
+SignalModel.objects.all().delete()
+
+try:
+    with transaction.atomic():
+        # This will trigger the signal
+        example = ExampleModel.objects.create(name="Test")
+        print("Signal action committed.")
+
+        # Raise an exception to trigger rollback
+        raise Exception("Force rollback")
+except Exception as e:
+    print("Transaction rolled back:", str(e))
+
+# Check if the SignalModel entry was created or rolled back
+print("SignalModel entries:", SignalModel.objects.all())
+
+
+Explanation and Expected Output
+Explanation:
+
+When ExampleModel.objects.create() is called, it triggers the post_save signal, which attempts to create an entry in SignalModel.
+Since the main transaction raises an exception right after the signal is triggered, the entire transaction (including the signal’s actions) should roll back.
+Expected Output:
+
+You should see that no entry was created in SignalModel, indicating that the signal’s actions were rolled back with the main transaction.
+
+Signal action committed.
+Transaction rolled back: Force rollback
+SignalModel entries: <QuerySet []>
+
+This output demonstrates that Django signals run in the same database transaction as the caller by default. If the transaction fails, the actions performed by the signal handler are also rolled back.
+
+
+
+4)
+Here's how you can create a Rectangle class in Python with the required features:
+
+class Rectangle:
+    def __init__(self, length: int, width: int):
+        self.length = length
+        self.width = width
+
+    def __iter__(self):
+        # We yield a dictionary with 'length' first, followed by 'width'
+        yield {'length': self.length}
+        yield {'width': self.width}
+
+Explanation:
+Constructor: __init__ initializes Rectangle instances with length and width.
+Iterator: __iter__ makes Rectangle instances iterable. It yields a dictionary with the length first ({'length': value}), then the width ({'width': value}).
+
+
+Example Usage
+
+# Create a Rectangle instance
+rect = Rectangle(5, 10)
+
+# Iterate over the instance
+for attribute in rect:
+    print(attribute)
+
+
+Expected Output
+
+{'length': 5}
+{'width': 10}
+
+This structure allows the instance to be iterable and gives the attributes in the specified format and order.
+
+
+
+
+
+
+
+
+
+
+
+
