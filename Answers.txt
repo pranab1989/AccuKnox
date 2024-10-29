@@ -161,8 +161,8 @@ This output demonstrates that Django signals run in the same database transactio
 
 
 
-4)
-Here's how you can create a Rectangle class in Python with the required features:
+TOPIC: CUSTOM CLASSES IN PYTHON
+ To create a Rectangle class in Python with the required features:
 
 class Rectangle:
     def __init__(self, length: int, width: int):
